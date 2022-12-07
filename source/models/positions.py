@@ -8,7 +8,6 @@ class InstrumentInfo:
     put_call: str
     amount: float
     price: float
-    date: str
 
 @dataclass
 class Position:
@@ -19,8 +18,9 @@ class Position:
     put_call: str
     amount: float
     price: float
-    date: str
-    strategy_id: str
+    open_at: str
+    closed_at: str or None
+    strategy_id: str or None
 
 @dataclass
 class StrategyPosition:

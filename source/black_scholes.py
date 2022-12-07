@@ -1,6 +1,8 @@
-import math
-import scipy.stats
 import datetime
+import math
+
+import scipy.stats
+
 
 class BlackScholes:
     def __init__(self, S, K, r, T_start, T_end, sig):

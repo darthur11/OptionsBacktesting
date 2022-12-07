@@ -1,13 +1,13 @@
-import portfolio
-import strategy
-import black_scholes
 import csv
 import datetime
 import math
-import models
+
+import black_scholes
 import matplotlib.pyplot as plt
-from matplotlib.dates import (YEARLY, DateFormatter,
-                              rrulewrapper, RRuleLocator, drange)
+import models
+import portfolio
+import strategy
+
 
 def read_input_dataset():
     output = []

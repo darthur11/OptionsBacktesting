@@ -1,8 +1,8 @@
 import unittest
 from unittest import TestCase
-from models import positions
 
-import portfolio
+from source import portfolio
+from source.models import positions
 
 
 class TestPortfolio(TestCase):
@@ -14,8 +14,7 @@ class TestPortfolio(TestCase):
         strike=30,
         put_call='C',
         amount=2,
-        price=4.5,
-        date='2022-12-01'
+        price=4.5
     )
     instrument2 = positions.InstrumentInfo(
         ticker='CIX',
@@ -23,8 +22,7 @@ class TestPortfolio(TestCase):
         strike=31,
         put_call='C',
         amount=2,
-        price=3.5,
-        date='2022-12-01'
+        price=3.5
     )
 
     def test_generate_open_position(self):
@@ -66,8 +64,7 @@ class TestPortfolio(TestCase):
             strike=30,
             put_call='C',
             amount=2,
-            price=4.5,
-            date='2022-12-01'
+            price=4.5
         )
         self.obj.open_position(instrument)
         remaining_cash = self.init_cash - instrument.amount * instrument.price
@@ -78,23 +75,24 @@ class TestPortfolio(TestCase):
 
 
     def test_change_position_1_sell(self):
-        print(self.obj.accounts)
+        print("test_change_position_1_sell")
+        init_cash = 1000
+        init_portfolio = portfolio.Portfolio(init_cash)
+        print(init_portfolio.accounts)
         instrument = positions.InstrumentInfo(
             ticker='VIX',
             expiration='2022-12-16',
             strike=30,
             put_call='C',
             amount=-2,
-            price=4.5,
-            date='2022-12-01'
+            price=4.5
         )
-        self.obj.open_position(instrument)
-        print(self.obj.accounts)
-        remaining_cash = self.init_cash - instrument.amount * instrument.price
-        print(self.obj.accounts)
-        self.assertEqual(remaining_cash, self.obj.accounts['cash'])
-        self.assertEqual(instrument.amount,
-                         self.obj.accounts['options'][0].amount)
+        init_portfolio.open_position(instrument)
+        print(init_portfolio.accounts)
+        remaining_cash = init_cash - instrument.amount * instrument.price
+        print(init_portfolio.accounts)
+        self.assertEqual(remaining_cash, init_portfolio.accounts['cash'])
+        self.assertEqual(instrument.amount, init_portfolio.accounts['options'][0].amount)
 
 
     def test_change_positions_close_should_correctly_change_balance(self):
@@ -112,10 +110,9 @@ class TestPortfolio(TestCase):
             strike=30,
             put_call='C',
             amount=2,
-            price=4.5,
-            date='2022-12-01'
+            price=4.5
         )
-        init_portfolio.open_position(instrument) # Decrease cash on 2*4.5 = 9
+        init_portfolio.open_position(instrument)  # Decrease cash on 2*4.5 = 9
         print("Open positions: \n", init_portfolio.open_positions)
         print("Balance after changes: \n", init_portfolio.accounts) # Show balances
         init_portfolio.change_positions_close(14.5, instrument) # Increase cash on 2*14.5 = 29
@@ -140,10 +137,9 @@ class TestPortfolio(TestCase):
             strike=30,
             put_call='C',
             amount=-2,
-            price=4.5,
-            date='2022-12-01'
+            price=4.5
         )
-        init_portfolio.open_position(instrument) # Increase cash on 2*4.5 = 9
+        init_portfolio.open_position(instrument)  # Increase cash on 2*4.5 = 9
         print("Open positions: \n", init_portfolio.open_positions)
         print("Balance after changes: \n", init_portfolio.accounts) # Show balances
         init_portfolio.change_positions_close(1.5, instrument) # Decrease cash on 2*1.5 = 3
@@ -168,8 +164,7 @@ class TestPortfolio(TestCase):
             strike=30,
             put_call='C',
             amount=2,
-            price=4.5,
-            date='2022-12-01'
+            price=4.5
         )
         init_portfolio.open_position(instrument)  # Decrease cash on 2*4.5 = 9
         print("Open positions: \n", init_portfolio.open_positions)
@@ -206,8 +201,7 @@ class TestPortfolio(TestCase):
             strike=30,
             put_call='C',
             amount=-2,
-            price=4.5,
-            date='2022-12-01'
+            price=4.5
         )
         init_portfolio.open_position(instrument)  # Increase cash on 2*4.5 = 9
         print("Open positions: \n", init_portfolio.open_positions)
@@ -227,12 +221,6 @@ class TestPortfolio(TestCase):
         self.assertEqual(test_cash, expected_cash)
         self.assertEqual(test_len_open, expected_len_open)
         self.assertEqual(test_len_closed, expected_len_closed)
-
-    def test_enumerate(self):
-        for i,k in enumerate([0,1,2,3,4,5]):
-            print(i,k)
-        self.assertEqual(True, True)
-
 
 if __name__ == '__main__':
     unittest.main()

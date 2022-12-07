@@ -1,5 +1,7 @@
-import requests
 import csv
+
+import requests
+
 
 def get_vix_data_cme():
     cme_url = "https://cdn.cboe.com/api/global/delayed_quotes/charts/historical/_VIX.json"

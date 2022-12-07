@@ -1,6 +1,7 @@
-from unittest import TestCase
-import strategy
 import datetime
+from unittest import TestCase
+
+import strategy
 
 
 class TestStrategy(TestCase):

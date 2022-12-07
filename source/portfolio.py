@@ -1,6 +1,7 @@
-from models import positions
 import uuid
 from typing import List
+
+from source.models import positions
 
 
 class Portfolio:
@@ -20,7 +21,7 @@ class Portfolio:
         account_amount = 0
         account_price = 0
         for i, element in enumerate(self.accounts['options']):
-            #print("Find accs: ", i, element)
+            # print("Find accs: ", i, element)
             if (element.ticker == instrument.ticker
                     and element.expiration == instrument.expiration
                     and element.strike == instrument.strike
@@ -42,8 +43,8 @@ class Portfolio:
             else:
                 total_amount = instrument.amount + account_amount
                 account_volume = account_amount * account_price
-                weighted_price = \
-                    (instrument_volume + account_volume) / total_amount
+                weighted_price = 0 if total_amount == 0 else (instrument_volume + account_volume) / total_amount
+                print(weighted_price)
                 self.accounts['options'][i].price = weighted_price
                 self.accounts['options'][i].amount = total_amount
                 self.accounts['cash'] = cash_remaining - instrument_volume
@@ -53,7 +54,7 @@ class Portfolio:
         return self.accounts
 
     def generate_open_position(self, instrument: positions.InstrumentInfo,
-                               strategy_id=None):
+                               open_at=None, strategy_id=None):
         position_to_insert = positions.Position(
             id=uuid.uuid4().hex,
             ticker=instrument.ticker,
@@ -62,20 +63,19 @@ class Portfolio:
             put_call=instrument.put_call,
             amount=instrument.amount,
             price=instrument.price,
-            date=instrument.date,
+            open_at=open_at,
+            closed_at=None,
             strategy_id=strategy_id
         )
         return position_to_insert
 
-    def open_position(self, instrument: positions.InstrumentInfo):
-        position_to_insert = self.generate_open_position(instrument)
+    def open_position(self, instrument: positions.InstrumentInfo, open_at=None):
+        position_to_insert = self.generate_open_position(instrument, open_at=open_at)
         self.change_positions_open(position_to_insert)
         self.open_positions.append(position_to_insert)
         return self.accounts
 
-    def generate_open_strategy_position(self,
-                                        instruments: List[
-                                            positions.InstrumentInfo]):
+    def generate_open_strategy_position(self, instruments: List[positions.InstrumentInfo], open_at=None):
         strategy_id = uuid.uuid4().hex
         opened_positions = []
         for instrument in instruments:
@@ -87,10 +87,10 @@ class Portfolio:
                         strike=instrument.strike,
                         put_call=instrument.put_call,
                         amount=instrument.amount,
-                        price=instrument.price,
-                        date=instrument.date
+                        price=instrument.price
                     ),
-                    strategy_id=strategy_id
+                    open_at=open_at,
+                    strategy_id=strategy_id,
                 )
             )
         return opened_positions
@@ -120,14 +120,13 @@ class Portfolio:
             self.accounts['options'].pop(i)
         return self.accounts
 
-    def close_position(self, id, liquidation_price, strategy_id=None):
+    def close_position(self, id, liquidation_price, closed_at=None, strategy_id=None):
         position_based_on_id = self.find_relevant_positions(id)
         open_position = self.open_positions[position_based_on_id]
         self.change_positions_close(liquidation_price, open_position)
         self.closed_positions.append(open_position)
         self.open_positions.pop(position_based_on_id)
         return self.closed_positions
-
 
     def generate_close_strategy_position(self, strategy_id):
         pass
