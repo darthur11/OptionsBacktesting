@@ -123,6 +123,7 @@ class Portfolio:
     def close_position(self, id, liquidation_price, closed_at=None, strategy_id=None):
         position_based_on_id = self.find_relevant_positions(id)
         open_position = self.open_positions[position_based_on_id]
+        open_position.closed_at = closed_at
         self.change_positions_close(liquidation_price, open_position)
         self.closed_positions.append(open_position)
         self.open_positions.pop(position_based_on_id)
