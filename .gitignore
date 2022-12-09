@@ -1,0 +1,4 @@
+resources/*
+source/__pycache__/*
+source/models/__pycache__/*
+.DS_Store/*

@@ -7,7 +7,7 @@ class InstrumentInfo:
     strike: float
     put_call: str
     amount: float
-    price: float
+    open_price: float
 
 @dataclass
 class Position:
@@ -17,10 +17,12 @@ class Position:
     strike: float
     put_call: str
     amount: float
-    price: float
+    open_price: float
+    liquidation_price: float or None
     open_at: str
     closed_at: str or None
     strategy_id: str or None
+    profit: float or None
 
 @dataclass
 class StrategyPosition:
