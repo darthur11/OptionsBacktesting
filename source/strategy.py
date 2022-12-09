@@ -27,7 +27,7 @@ class Strategy:
     def close_strat(self):
         if (self.num_open_positions > 0
                 and self.min_dte < 7
-                and self.absolute_profit > 100):
+                and self.relative_profit > .5):
             return 1
         elif (self.num_open_positions > 0 and self.min_dte < 3):
             return 1

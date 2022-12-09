@@ -27,7 +27,7 @@ class Portfolio:
                     and element.strike == instrument.strike
                     and element.put_call == instrument.put_call):
                 account_amount = element.amount
-                account_price = element.price
+                account_price = element.open_price
                 is_found = True
                 break
         return is_found, i, account_amount, account_price
@@ -35,7 +35,7 @@ class Portfolio:
     def change_positions_open(self, instrument: positions.Position):
         is_found, i, account_amount, account_price = self.find_account(
             instrument)
-        instrument_volume = instrument.amount * instrument.price
+        instrument_volume = instrument.amount * instrument.open_price
         cash_remaining = self.accounts['cash']
         if (is_found):
             if (instrument_volume > cash_remaining):
@@ -45,7 +45,7 @@ class Portfolio:
                 account_volume = account_amount * account_price
                 weighted_price = 0 if total_amount == 0 else (instrument_volume + account_volume) / total_amount
                 print(weighted_price)
-                self.accounts['options'][i].price = weighted_price
+                self.accounts['options'][i].open_price = weighted_price
                 self.accounts['options'][i].amount = total_amount
                 self.accounts['cash'] = cash_remaining - instrument_volume
         else:
@@ -62,10 +62,12 @@ class Portfolio:
             strike=instrument.strike,
             put_call=instrument.put_call,
             amount=instrument.amount,
-            price=instrument.price,
+            open_price=instrument.open_price,
+            liquidation_price=None,
             open_at=open_at,
             closed_at=None,
-            strategy_id=strategy_id
+            strategy_id=strategy_id,
+            profit=None
         )
         return position_to_insert
 
@@ -87,7 +89,7 @@ class Portfolio:
                         strike=instrument.strike,
                         put_call=instrument.put_call,
                         amount=instrument.amount,
-                        price=instrument.price
+                        open_price=instrument.open_price
                     ),
                     open_at=open_at,
                     strategy_id=strategy_id,
@@ -95,20 +97,28 @@ class Portfolio:
             )
         return opened_positions
 
-    def open_strategy_position(self, positions: List[positions.Position]):
+    def open_strategy_position(self, instruments: List[positions.InstrumentInfo], open_at = None):
+        positions = self.generate_open_strategy_position(instruments, open_at=open_at)
         for position_to_insert in positions:
             self.change_positions_open(position_to_insert)
             self.open_positions.append(
                 position_to_insert
             )
-            return self.accounts
+        return self.accounts
 
-    def find_relevant_positions(self, id, strategy_id=None):
+    def find_relevant_positions_by_id(self, id, strategy_id=None):
         for i, element in enumerate(self.open_positions):
             if (element.id == id):
                 return i
             else:
                 return None
+
+    def find_relevant_positions_by_strategy_id(self, strategy_id):
+        position_numbers = []
+        for i, element in enumerate(self.open_positions):
+            if (element.strategy_id == strategy_id):
+                position_numbers.append(i)
+        return position_numbers
 
     def change_positions_close(self, liquidation_price, instrument: positions.Position):
         is_found, i, account_amount, account_price = self.find_account(
@@ -121,13 +131,19 @@ class Portfolio:
         return self.accounts
 
     def close_position(self, id, liquidation_price, closed_at=None, strategy_id=None):
-        position_based_on_id = self.find_relevant_positions(id)
+        position_based_on_id = self.find_relevant_positions_by_id(id)
         open_position = self.open_positions[position_based_on_id]
         open_position.closed_at = closed_at
+        open_position.liquidation_price = liquidation_price
+        open_position.profit = (liquidation_price - open_position.open_price) * open_position.amount
         self.change_positions_close(liquidation_price, open_position)
         self.closed_positions.append(open_position)
         self.open_positions.pop(position_based_on_id)
         return self.closed_positions
 
-    def generate_close_strategy_position(self, strategy_id):
-        pass
+    def get_mapping_id_strategy_id(self):
+        from itertools import groupby
+        from operator import attrgetter
+        groups = groupby(self.open_positions, attrgetter("strategy_id"))
+        return [{"strategy_id": key, "ids": [item.id for item in data]} for (key, data) in groups]
+

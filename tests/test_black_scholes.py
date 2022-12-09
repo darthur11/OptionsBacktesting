@@ -1,10 +1,10 @@
 import unittest
 
-import black_scholes
+import source.black_scholes
 
 
 class MyTestCase(unittest.TestCase):
-    obj = black_scholes.BlackScholes(21.89, 22, 0.03, "2022-11-26", "2022-12-16", 0.052)
+    obj = source.black_scholes.BlackScholes(21.89, 22, 0.03, "2022-11-26", "2022-12-16", 0.052)
 
     eps = 10 ** -6
     bench_call_price = 2.000412
@@ -23,6 +23,11 @@ class MyTestCase(unittest.TestCase):
         self.assertAlmostEqual(first=put_price, second=self.bench_put_price,
                                msg="They should be almost equal",
                                delta=self.eps)
+
+    def test_reality(self):
+        obj = source.black_scholes.BlackScholes(22.74, 23, 0.045, "2022-12-09", "2022-12-16", 0.058)
+        print(obj.price_call())
+        print(obj.price_put())
 
 
 if __name__ == '__main__':

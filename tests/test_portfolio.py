@@ -14,7 +14,7 @@ class TestPortfolio(TestCase):
         strike=30,
         put_call='C',
         amount=2,
-        price=4.5
+        open_price=4.5
     )
     instrument2 = positions.InstrumentInfo(
         ticker='CIX',
@@ -22,7 +22,7 @@ class TestPortfolio(TestCase):
         strike=31,
         put_call='C',
         amount=2,
-        price=3.5
+        open_price=3.5
     )
 
     def test_generate_open_position(self):
@@ -32,7 +32,7 @@ class TestPortfolio(TestCase):
                          position_to_insert.expiration)
         self.assertEqual(self.instrument.strike, position_to_insert.strike)
         self.assertEqual(self.instrument.put_call, position_to_insert.put_call)
-        self.assertEqual(self.instrument.price, position_to_insert.price)
+        self.assertEqual(self.instrument.open_price, position_to_insert.open_price)
         self.assertEqual(self.instrument.amount, position_to_insert.amount)
 
     def test_generate_strategy_open_position_same_strategy(self):
@@ -48,13 +48,13 @@ class TestPortfolio(TestCase):
         self.assertEqual(positions[0].strike, self.instrument.strike)
         self.assertEqual(positions[0].put_call, self.instrument.put_call)
         self.assertEqual(positions[0].amount, self.instrument.amount)
-        self.assertEqual(positions[0].price, self.instrument.price)
+        self.assertEqual(positions[0].open_price, self.instrument.open_price)
         self.assertEqual(positions[1].ticker, self.instrument2.ticker)
         self.assertEqual(positions[1].expiration, self.instrument2.expiration)
         self.assertEqual(positions[1].strike, self.instrument2.strike)
         self.assertEqual(positions[1].put_call, self.instrument2.put_call)
         self.assertEqual(positions[1].amount, self.instrument2.amount)
-        self.assertEqual(positions[1].price, self.instrument2.price)
+        self.assertEqual(positions[1].open_price, self.instrument2.open_price)
 
     def test_change_position_1_buy(self):
         print(self.obj.accounts)
@@ -64,10 +64,10 @@ class TestPortfolio(TestCase):
             strike=30,
             put_call='C',
             amount=2,
-            price=4.5
+            open_price=4.5
         )
         self.obj.open_position(instrument)
-        remaining_cash = self.init_cash - instrument.amount * instrument.price
+        remaining_cash = self.init_cash - instrument.amount * instrument.open_price
         print(self.obj.accounts)
         self.assertEqual(remaining_cash, self.obj.accounts['cash'])
         self.assertEqual(instrument.amount,
@@ -85,11 +85,11 @@ class TestPortfolio(TestCase):
             strike=30,
             put_call='C',
             amount=-2,
-            price=4.5
+            open_price=4.5
         )
         init_portfolio.open_position(instrument)
         print(init_portfolio.accounts)
-        remaining_cash = init_cash - instrument.amount * instrument.price
+        remaining_cash = init_cash - instrument.amount * instrument.open_price
         print(init_portfolio.accounts)
         self.assertEqual(remaining_cash, init_portfolio.accounts['cash'])
         self.assertEqual(instrument.amount, init_portfolio.accounts['options'][0].amount)
@@ -110,7 +110,7 @@ class TestPortfolio(TestCase):
             strike=30,
             put_call='C',
             amount=2,
-            price=4.5
+            open_price=4.5
         )
         init_portfolio.open_position(instrument)  # Decrease cash on 2*4.5 = 9
         print("Open positions: \n", init_portfolio.open_positions)
@@ -137,7 +137,7 @@ class TestPortfolio(TestCase):
             strike=30,
             put_call='C',
             amount=-2,
-            price=4.5
+            open_price=4.5
         )
         init_portfolio.open_position(instrument)  # Increase cash on 2*4.5 = 9
         print("Open positions: \n", init_portfolio.open_positions)
@@ -164,7 +164,7 @@ class TestPortfolio(TestCase):
             strike=30,
             put_call='C',
             amount=2,
-            price=4.5
+            open_price=4.5
         )
         init_portfolio.open_position(instrument)  # Decrease cash on 2*4.5 = 9
         print("Open positions: \n", init_portfolio.open_positions)
@@ -201,7 +201,7 @@ class TestPortfolio(TestCase):
             strike=30,
             put_call='C',
             amount=-2,
-            price=4.5
+            open_price=4.5
         )
         init_portfolio.open_position(instrument)  # Increase cash on 2*4.5 = 9
         print("Open positions: \n", init_portfolio.open_positions)
@@ -221,6 +221,77 @@ class TestPortfolio(TestCase):
         self.assertEqual(test_cash, expected_cash)
         self.assertEqual(test_len_open, expected_len_open)
         self.assertEqual(test_len_closed, expected_len_closed)
+
+    def test_strategy_open(self):
+        init_cash = 1000
+        init_portfolio = portfolio.Portfolio(init_cash)
+        print("Init balances: \n", init_portfolio.accounts)
+        initial_cash = init_portfolio.accounts['cash']
+        instrument1 = positions.InstrumentInfo(
+            ticker='MIX',
+            expiration='2022-12-16',
+            strike=30,
+            put_call='C',
+            amount=-2,
+            open_price=4.5
+        )
+        instrument2 = positions.InstrumentInfo(
+            ticker='MIX',
+            expiration='2023-01-15',
+            strike=30,
+            put_call='C',
+            amount=+2,
+            open_price=6.5
+        )
+        init_portfolio.open_strategy_position([instrument1, instrument2])
+        test_num_elements = len(init_portfolio.open_positions)
+        expected_num_elements = 2
+        strategy_id_1 = init_portfolio.open_positions[0].strategy_id
+        strategy_id_2 = init_portfolio.open_positions[1].strategy_id
+        self.assertEqual(test_num_elements, expected_num_elements)
+        self.assertEqual(strategy_id_1, strategy_id_2)
+
+
+    def test_strategy_close(self):
+        init_cash = 1000
+        init_portfolio = portfolio.Portfolio(init_cash)
+        print("Init balances: \n", init_portfolio.accounts)
+        initial_cash = init_portfolio.accounts['cash']
+        instrument1 = positions.InstrumentInfo(
+            ticker='MIX',
+            expiration='2022-12-16',
+            strike=30,
+            put_call='C',
+            amount=-2,
+            open_price=4.5
+        )
+        instrument2 = positions.InstrumentInfo(
+            ticker='MIX',
+            expiration='2023-01-15',
+            strike=30,
+            put_call='C',
+            amount=+2,
+            open_price=6.5
+        )
+        instrument3 = positions.InstrumentInfo(
+            ticker='VIX',
+            expiration='2023-02-15',
+            strike=30,
+            put_call='C',
+            amount=+2,
+            open_price=6.5
+        )
+        init_portfolio.open_strategy_position([instrument1, instrument2])
+        init_portfolio.open_position(instrument3)
+        from itertools import groupby
+        from operator import attrgetter
+        print(init_portfolio.open_positions)
+        groups = groupby(init_portfolio.open_positions, attrgetter("strategy_id"))
+        print(
+            [{"strategy": key, "ids": [ item.id  for item in data]} for (key, data) in groups]
+        )
+
+
 
 if __name__ == '__main__':
     unittest.main()
