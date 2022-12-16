@@ -29,7 +29,7 @@ class Strategy:
                 and self.min_dte < 7
                 and self.relative_profit > .5):
             return 1
-        elif (self.num_open_positions > 0 and self.min_dte < 3):
+        elif (self.num_open_positions > 0 and self.min_dte < 5):
             return 1
         else:
             return 0
@@ -45,7 +45,7 @@ class Strategy:
             # What day of the week is the 15th?
             w = third.weekday()
             # Friday is weekday 4
-            if w != 4:
+            if w != 2:
                 # Replace just the day (of month)
                 third = third.replace(day=(15 + (4 - w) % 7))
             expirations.append((third, third - init_date))

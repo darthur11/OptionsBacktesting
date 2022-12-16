@@ -25,7 +25,7 @@ class MyTestCase(unittest.TestCase):
                                delta=self.eps)
 
     def test_reality(self):
-        obj = source.black_scholes.BlackScholes(22.74, 23, 0.045, "2022-12-09", "2022-12-16", 0.058)
+        obj = source.black_scholes.BlackScholes(25.69, 26, 0.0375, "2022-06-01", "2022-06-15", 0.0894916)
         print(obj.price_call())
         print(obj.price_put())
 
