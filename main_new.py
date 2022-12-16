@@ -5,10 +5,14 @@ import math
 from source.black_scholes import BlackScholes
 from source.models.positions import Position, StrategyPosition, InstrumentInfo
 from source.portfolio import Portfolio
-from source.strategy import Strategy
+from source.volatility_hedge_strategy import VolatilityHedgeStrategy
 
 import matplotlib.pyplot as plt
 import pandas as pd
+
+import logging
+logging.basicConfig(filename='./resources/log.log', level=logging.INFO)
+
 
 def unique(seq):
     seen = set()
@@ -116,38 +120,13 @@ if __name__ == '__main__':
         str_dates.append(str(row))
     dates_fo_plot = []
     print("Move through each day to decide what's next")
+
     for row in str_dates:
         num_open_positions = len(portfolio.open_positions)
         today_str = str(row)
         today_dt = datetime.datetime.strptime(str(row), "%Y-%m-%d").date()
 
-        min_dte = min(
-            [(datetime.datetime.strptime(el.expiration, "%Y-%m-%d").date() - today_dt).days
-             for el in portfolio.open_positions],
-            default=-1)
-        revenue = 0
-        volume = 0
-        for el in portfolio.open_positions:
-            strike = el.strike
-            expiration = el.expiration
-            price = el.open_price
-            amount = el.amount
-            put_call = el.put_call
-            current_price = 0
-            try:
-                current_price = input[row][(expiration, strike)][0]
-            except:
-                print("options hasn't found")
-
-            #bs = BlackScholes(K=strike, S=row[4], r=r, T_start=row[0], T_end=expiration, sig=row[6])
-            #current_price = bs.get_price(put_call)
-            revenue_item = amount * (current_price - price)
-            volume_item = price * amount
-            volume = volume + volume_item
-            revenue = revenue + revenue_item
-        relative_rev = revenue / volume if volume > 0 else 0
-
-        strat = Strategy(num_open_positions, min_dte, today_str, revenue, relative_rev)
+        strat = VolatilityHedgeStrategy(num_open_positions, today_str)
         if (strat.open_strat()):
             expirations = input[row].items()
             try:
