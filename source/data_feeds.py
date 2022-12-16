@@ -2,6 +2,30 @@ import csv
 
 import requests
 
+def read_input_dataset():
+    output = {}
+    dates = []
+    "quote_date", "underlying_last", "expire_date", "dte", "strike", "c_mid", "p_mid", "rn_buy", "strike_distance_pct"
+    with open(f'./resources/VIX_options_.csv', 'r', encoding='UTF8') as f:
+        reader = csv.reader(f)
+        for i, row in enumerate(reader):
+            if i > 0:
+                date = row[0]
+                underlying = float(row[1])
+                expire_date = row[2]
+                strike = int(round(float(row[3])))
+                key = (expire_date, strike)
+                value = (float(row[4]), float(row[5]), float(row[6]), int(row[7]), float(row[8]))
+                output.update(
+                    {date: {
+                        'underlying_price': underlying,
+                        key: value
+                    }}
+                )
+    dates_fin = list(output.keys())
+    dates_fin.sort()
+    return output, dates_fin
+
 
 def get_vix_data_cme():
     cme_url = "https://cdn.cboe.com/api/global/delayed_quotes/charts/historical/_VIX.json"

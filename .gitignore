@@ -1,4 +1,10 @@
-resources/*
-source/__pycache__/*
-source/models/__pycache__/*
-.DS_Store/*
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# C extensions
+*.so
+
+.DS_Store
+
+resources/
