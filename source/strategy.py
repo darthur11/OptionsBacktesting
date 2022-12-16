@@ -4,7 +4,7 @@ from dateutil.relativedelta import relativedelta
 
 
 class Strategy:
-    def __init__(self, open_positions, options_chain, num_open_positions, min_dte, date, absolute_profit=None, relative_profit=None, open_for=None):
+    def __init__(self, open_positions, options_chain, date):
         self.open_positions = open_positions
         self.options_chain = options_chain
         self.today_dt = datetime.datetime.strptime(date, "%Y-%m-%d").date()
@@ -47,26 +47,8 @@ class Strategy:
             print("options hasn't found")
         return current_price
 
-
-    def open_strat(self):
-        nearest_expirations = self.get_expirations()
-        if (self.num_open_positions == 0 and
-                int(nearest_expirations[0][1].days) >= 13):
-            return 1
-        else:
-            return 0
-
-    def close_strat(self):
-        if (self.num_open_positions > 0 and self.relative_profit > 0.9):
-            return 1
-        elif (self.open_for > 8 and self.relative_profit < -0.2):
-            return 1
-        elif (self.num_open_positions > 0 and self.relative_profit > .5 and self.min_dte < 9):
-            return 1
-        elif (self.num_open_positions > 0 and self.min_dte < 6):
-            return 1
-        else:
-            return 0
+    def get_num_open_positions(self):
+        return len(self.open_positions)
 
     def get_expirations(self):
         expirations = []
