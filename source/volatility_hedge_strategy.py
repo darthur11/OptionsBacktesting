@@ -16,6 +16,8 @@ class VolatilityHedgeStrategy(Strategy):
         relative_profit = revenue / volume if volume > 0 else 0
         if (num_open_positions > 0 and relative_profit > 0.9):
             return 1
+        elif (self.get_min_dte() < 10 and relative_profit < -0.5):
+            return 1
         elif (position_open_for > 8 and relative_profit < -0.2):
             return 1
         elif (num_open_positions > 0 and relative_profit > .5 and self.get_min_dte() < 9):
