@@ -1,7 +1,7 @@
 from source.strategy import Strategy
 from source.models.positions import InstrumentInfo
 
-class VolatilityHedgeStrategy(Strategy):
+class VolatilityHedgeStrategyPut(Strategy):
     def open_strat(self):
         num_open_positions = self.get_num_open_positions()
         nearest_expirations = self.get_expirations()
@@ -29,37 +29,46 @@ class VolatilityHedgeStrategy(Strategy):
 
     def get_instruments_for_strategy(self, cash_available):
         first_leg, second_leg = [], []
+        underlying = self.instrument_data['underlying']
         expirations = self.options_chain.items()
+        print(self.timestamp_str)
+        strike_first_leg, strike_second_leg = -1, -1
         try:
             first_leg = [con for con in expirations if (con[1][2] == 1 and con[1][3] == 1)][0]
+            strike_first_leg = first_leg[0][1] if len(first_leg) > 0 else -1
             print("first leg: ", first_leg)
         except:
             print("no first leg")
         try:
             second_leg = [con for con in expirations if (con[1][2] == 1 and con[1][3] == 2)][0]
             print("second leg: ", second_leg)
+            strike_second_leg = second_leg[0][1] if len(second_leg) > 0 else -1
         except:
             print("no second leg")
+        #print(strike_first_leg,strike_second_leg,strike_first_leg == strike_second_leg)
+        if len(first_leg) > 0 and len(second_leg) > 0 and strike_first_leg == strike_second_leg:
+            #print(first_leg[1][0], second_leg[1][0])
+            denum = (-first_leg[1][1] + second_leg[1][1])
+            numerator = 0.2 * cash_available
+            amount = round(numerator/denum, -3) if abs(denum)>0.1 else round(numerator/first_leg[1][1], -3)
 
-        if len(first_leg) > 0 and len(second_leg) > 0:
-            amount = round(0.2 * cash_available / (-first_leg[1][0] + second_leg[1][0]), -3)
             print(amount)
 
             instrument1 = InstrumentInfo(
                 ticker="VIX",
                 strike=first_leg[0][1],
                 expiration=first_leg[0][0],  # .strftime('%Y-%m-%d'),
-                put_call="C",
+                put_call="P",
                 amount=-amount,
-                open_price=first_leg[1][0]
+                open_price=first_leg[1][1]
             )
             instrument2 = InstrumentInfo(
                 ticker="VIX",
                 strike=second_leg[0][1],
                 expiration=second_leg[0][0],  # .strftime('%Y-%m-%d'),
-                put_call="C",
+                put_call="P",
                 amount=amount,
-                open_price=second_leg[1][0]
+                open_price=second_leg[1][1]
             )
             return [instrument1, instrument2]
         else:
