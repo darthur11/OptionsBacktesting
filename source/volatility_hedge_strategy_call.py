@@ -5,11 +5,10 @@ from source.models.positions import InstrumentInfo
 from ast import literal_eval
 from collections import Counter
 import time
+from source.utils import *
 class VolatilityHedgeStrategyCall(Strategy):
-
-
     def open_strat(self):
-        hours_to_open = tuple((4, 5, 6, 7, 8, 9))
+        hours_to_open = (10, 11, 12, 13, 14, 15)
         num_open_positions = self.get_num_open_positions()
         nearest_expirations = self.get_expirations_depr()
         hour_flag, open_positions_flag, expirations_flag = 0, 0, 0
@@ -40,7 +39,7 @@ class VolatilityHedgeStrategyCall(Strategy):
 
     def get_expirations(self, x, strike):
         lst = [val[0] for val in x if val[1] == strike]
-        lst.sort(key=lambda x: time.mktime(datetime.datetime.strptime(x, "%d.%m.%Y").timetuple()))
+        lst.sort(key=lambda x: convert_string_to_datetime(x, dateFormats.ddmmyyyy_point).timestamp())
         return lst
 
     def get_earliest_expirations(self, input_value, strike):
@@ -65,8 +64,9 @@ class VolatilityHedgeStrategyCall(Strategy):
                 first_leg = self.options_chain[(expiration_keys[0], strike)]
                 second_leg = self.options_chain[(expiration_keys[1], strike)]
                 #if first_leg[2] < 8.0 and second_leg[2] < 8.0:
-                lst.append((strike, expiration_keys[0], first_leg, expiration_keys[1], second_leg, -first_leg[2]+second_leg[2]))
+                lst.append((strike, expiration_keys[0], first_leg, expiration_keys[1], second_leg, abs(self.underlying_price - int(strike))))
                 lst.sort(key = lambda x: x[5])
+        print(lst)
         try:
             #first_leg = [con for con in expirations if (con[1][2] == 1 and con[1][3] == 1)][0]
             first_leg = lst[0][2]

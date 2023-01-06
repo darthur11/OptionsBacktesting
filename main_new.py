@@ -144,8 +144,8 @@ if __name__ == '__main__':
     for row in str_dates:
         today_str = str(row)
         today_dt = datetime.datetime.fromtimestamp(int(row))
-        options_data = {literal_eval(k): v for k, v in input[row].items()}
-        strat = VolatilityHedgeStrategyCall(portfolio.open_positions, options_data, today_str)
+        options_data = {literal_eval(k): v for k, v in input[row].items() if k!='underlying'}
+        strat = VolatilityHedgeStrategyCall(portfolio.open_positions, options_data, today_str, input[row]['underlying'])
         #strat = VolatilityHedgeStrategyPut(portfolio.open_positions, input[row], today_str)
         if (strat.open_strat()):
             list_instruments = strat.get_instruments_for_strategy(portfolio.accounts['cash'])

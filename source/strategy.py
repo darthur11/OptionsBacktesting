@@ -4,11 +4,12 @@ from dateutil.relativedelta import relativedelta
 from source.utils import *
 
 class Strategy:
-    def __init__(self, open_positions, instrument_data, timestamp):
+    def __init__(self, open_positions, instrument_data, timestamp, underlying_price):
         self.open_positions = open_positions
         self.options_chain = instrument_data
         self.timestamp = convert_timestamp_to_datetime(int(timestamp))
         self.timestamp_str = timestamp
+        self.underlying_price = float(underlying_price) if underlying_price is not None else 0.0
 
     def get_min_dte(self):
         min_dte = min(
