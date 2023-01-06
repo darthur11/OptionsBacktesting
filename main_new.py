@@ -1,14 +1,18 @@
 import csv
 import datetime
-import math
 
-from source.black_scholes import BlackScholes
+import ujson
+from ast import literal_eval
 from source.models.positions import Position, StrategyPosition, InstrumentInfo
 from source.portfolio import Portfolio
-from source.strategy import Strategy
-
+from source.volatility_hedge_strategy_call import VolatilityHedgeStrategyCall
 import matplotlib.pyplot as plt
 import pandas as pd
+import logging
+from source.utils import *
+
+logging.basicConfig(filename='./resources/log.log', level=logging.INFO)
+
 
 def unique(seq):
     seen = set()
@@ -39,20 +43,35 @@ def show_chart_ggplot(dates, y_axis):
 
 def itertuples_impl(df):
   return pd.Series(
-    row.cash if row.diff == True else None
+    row.total_account if abs(row.delta) > 0.01 else None
     for row in df.itertuples()
   )
 
-def show_chart_plotly(dates, y_axis):
+def show_chart_plotly(dataset):
     import plotly.express as px
     import plotly.graph_objects as go
-    data = pd.DataFrame({'period': dates, 'cash': y_axis})
-    data.to_csv("./resources/for_chart_data.csv")
+    data = pd.DataFrame(dataset, columns=['period', 'cash', 'open_positions'])
+    data['total_account'] = data['cash'] + data['open_positions']
     data['period'] = pd.to_datetime(data['period'])
-    data['diff'] = (data.cash - data.cash.shift(1) != 0)
+    data['delta'] = (data.total_account - data.total_account.shift(1))
+    data['delta_relative'] = (data.delta / data.total_account.shift(1))
     data['movement'] = itertuples_impl(data)
-    print(data)
-    fig1 = px.line(data, x='period', y='cash')
+    data.to_csv("./resources/for_chart_data.csv")
+
+    drawdown, drawdown_rel = data[['delta', 'delta_relative']].agg(['min']).values[0]
+    init, end = data.iloc[[1,-1], 3].values
+    start_date, end_date = data.iloc[[1,-1], 0].values
+    print(start_date, end_date)
+    num_days = float((end_date - start_date)/10**9)/3600/24
+    print(num_days)
+    print(f"""Max drawdown: {drawdown}, 
+Relative drawdown: {drawdown_rel}, 
+Compounded growth: {end/init}, 
+Monthly average growth: {(end/init) ** (30/num_days) - 1}""")
+
+
+
+    fig1 = px.line(data, x='period', y='total_account')
 
     fig2 = px.scatter(data, x='period', y='movement', color_discrete_sequence=['red'], size_max=3.5)
     fig2.update_traces(marker={'size': 7.5})
@@ -83,7 +102,7 @@ def show_chart_plotly(dates, y_axis):
 def read_input_dataset():
     output = {}
     dates = []
-    "quote_date", "underlying_last", "expire_date", "dte", "strike", "c_mid", "p_mid", "rn_buy", "rn_expiration", "strike_distance_pct"
+    #"quote_date", "underlying_last", "expire_date", "dte", "strike", "c_mid", "p_mid", "rn_buy", "rn_expiration", "strike_distance_pct"
     with open(f'./resources/VIX_options_.csv', 'r', encoding='UTF8') as f:
         reader = csv.reader(f)
         for i, row in enumerate(reader):
@@ -95,13 +114,19 @@ def read_input_dataset():
                 key = (expire_date, strike)
                 value = (float(row[5]), float(row[6]), int(row[7]), int(row[8]), float(row[9]))
                 if not(date in output.keys()):
-                    output.update({date: {key: value}})
+                    output.update({date: {"options": {key: value}, "underlying": underlying}})
                 else:
-                    output[date][key] = value
+                    output[date]["options"][key] = value
     dates_fin = list(output.keys())
     dates_fin.sort()
     return output, dates_fin
 
+def read_input():
+    with open("/Users/dossatayev/PycharmProjects/OptionsDataGrabber/input_data.json", 'r') as f:
+        output = ujson.load(f)
+    dates_fin = list(output.keys())
+    dates_fin.sort()
+    return output, dates_fin
 
 if __name__ == '__main__':
     init_cash_position = 100000
@@ -109,85 +134,32 @@ if __name__ == '__main__':
     print("Init portfolio.....")
     portfolio = Portfolio(init_cash_position=init_cash_position)
     print("Read input dataset:")
-    input, dates = read_input_dataset()
+    input, dates = read_input()
     print(len(dates))
     str_dates = []
     for row in dates:
         str_dates.append(str(row))
-    dates_fo_plot = []
     print("Move through each day to decide what's next")
+
     for row in str_dates:
-        num_open_positions = len(portfolio.open_positions)
         today_str = str(row)
-        today_dt = datetime.datetime.strptime(str(row), "%Y-%m-%d").date()
-
-        min_dte = min(
-            [(datetime.datetime.strptime(el.expiration, "%Y-%m-%d").date() - today_dt).days
-             for el in portfolio.open_positions],
-            default=-1)
-        revenue = 0
-        volume = 0
-        for el in portfolio.open_positions:
-            strike = el.strike
-            expiration = el.expiration
-            price = el.open_price
-            amount = el.amount
-            put_call = el.put_call
-            current_price = 0
-            try:
-                current_price = input[row][(expiration, strike)][0]
-            except:
-                print("options hasn't found")
-
-            #bs = BlackScholes(K=strike, S=row[4], r=r, T_start=row[0], T_end=expiration, sig=row[6])
-            #current_price = bs.get_price(put_call)
-            revenue_item = amount * (current_price - price)
-            volume_item = price * amount
-            volume = volume + volume_item
-            revenue = revenue + revenue_item
-        relative_rev = revenue / volume if volume > 0 else 0
-
-        strat = Strategy(num_open_positions, min_dte, today_str, revenue, relative_rev)
+        today_dt = datetime.datetime.fromtimestamp(int(row))
+        options_data = {literal_eval(k): v for k, v in input[row].items() if k!='underlying'}
+        strat = VolatilityHedgeStrategyCall(portfolio.open_positions, options_data, today_str, input[row]['underlying'])
+        #strat = VolatilityHedgeStrategyPut(portfolio.open_positions, input[row], today_str)
         if (strat.open_strat()):
-            expirations = input[row].items()
-            try:
-                first_leg = [con for con in expirations if (con[1][2] == 1 and con[1][3] == 1)][0]
-            except:
-                print("no first leg")
-            try:
-                second_leg = [con for con in expirations if (con[1][2] == 1 and con[1][3] == 2)][0]
-            except:
-                print("no second leg")
-            print("first leg: ", first_leg)
-            print("second leg: ", second_leg)
-            if len(first_leg)>0 and len(second_leg)>0:
-                amount = round(0.2 * portfolio.accounts['cash'] / (-first_leg[1][0] + second_leg[1][0]),-3)
-                print(amount)
-
-                instrument1 = InstrumentInfo(
-                    ticker="VIX",
-                    strike=first_leg[0][1],
-                    expiration=first_leg[0][0],#.strftime('%Y-%m-%d'),
-                    put_call="C",
-                    amount=-amount,
-                    open_price=first_leg[1][0]
-                )
-                instrument2 = InstrumentInfo(
-                    ticker="VIX",
-                    strike=second_leg[0][1],
-                    expiration=second_leg[0][0],#.strftime('%Y-%m-%d'),
-                    put_call="C",
-                    amount=amount,
-                    open_price=second_leg[1][0]
-                )
-                # Open strategy position:
-                portfolio.open_strategy_position([instrument1, instrument2], open_at=today_str)
+            list_instruments = strat.get_instruments_for_strategy(portfolio.accounts['cash'])
+            # Open strategy position:
+            if len(list_instruments)>0:
+                portfolio.open_strategy_position(list_instruments, open_at=today_str)
             else:
                 print("one or more leg is not here")
 
         if (strat.close_strat()):
             get_mapping_id_strategy = portfolio.get_mapping_id_strategy_id()
+            #print('Get mapping id strategy: ', get_mapping_id_strategy)
             for id_strategy_map in get_mapping_id_strategy:
+                #print('Open positions: ', portfolio.open_positions)
                 for id in id_strategy_map['ids']:
                     array_position = portfolio.find_relevant_positions_by_id(id)
                     position = portfolio.open_positions[array_position]
@@ -197,17 +169,21 @@ if __name__ == '__main__':
                     amount = position.amount
                     put_call = position.put_call
                     liquidation_price = 0
-                    try:
-                        liquidation_price = input[row][(expiration, strike)][0]
-                    except:
-                        print("options hasn't found")
+                    if strike in strat.get_available_diagonal_strikes():
+                        try:
+                            liquidation_price = options_data[(expiration, str(strike))][2]
+                        except:
+                            print("options hasn't found")
 
-                    #bs = BlackScholes(K=strike, S=row[4], r=r, T_start=today_str, T_end=expiration, sig=row[6])
-                    portfolio.close_position(id=id, liquidation_price=liquidation_price, closed_at=today_str)
-
-        portfolio.accounts_snapshot.append(portfolio.accounts['cash'])
-        dates_fo_plot.append(today_dt)
-    print(portfolio.accounts_snapshot)
+                        if liquidation_price != 0:
+                            #bs = BlackScholes(K=strike, S=row[4], r=r, T_start=today_str, T_end=expiration, sig=row[6])
+                            portfolio.close_position(id=id, liquidation_price=liquidation_price, closed_at=today_str)
+                    else:
+                        break
+        portfolio.accounts_snapshot.append(
+            (today_dt, portfolio.accounts['cash'], strat.get_position_metrics()[1])
+        )
+    #print(portfolio.accounts_snapshot)
     import dataclasses
     with open("./resources/portfolio.csv", "w") as p:
         writer = csv.writer(p)
@@ -216,4 +192,4 @@ if __name__ == '__main__':
             writer.writerow(dataclasses.astuple(row))
     print(portfolio.open_positions)
     #show_chart(dates_fo_plot, portfolio.accounts_snapshot)
-    show_chart_plotly(dates_fo_plot, portfolio.accounts_snapshot)
+    show_chart_plotly(portfolio.accounts_snapshot)

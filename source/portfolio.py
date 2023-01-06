@@ -110,8 +110,7 @@ class Portfolio:
         for i, element in enumerate(self.open_positions):
             if (element.id == id):
                 return i
-            else:
-                return None
+        return None
 
     def find_relevant_positions_by_strategy_id(self, strategy_id):
         position_numbers = []
